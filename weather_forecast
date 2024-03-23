@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+#!/usr/bin/env python
+# coding: utf-8
+
+import streamlit as st
+import requests
+import matplotlib.pyplot as plt
+import datetime
+import pytz
+
+api_key = '2c01b45b5e2c0bde02f22e6df3e8f126'
+
+st.title('3-Day Weather Forecast and Chart App')
+
+city = st.text_input('Enter a place name:')
+chart_choice = st.selectbox('Choose Chart Type:', ['Line Chart', 'Bar Chart'])
+
+if st.button('Get 3-Day Weather Forecast'):
+    url = f'http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}'
+
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        # Determine the time zone based on the city name
+        city_info = data.get('city', {})
+        city_timezone = city_info.get('timezone', 0)  # Get the timezone offset in seconds
+        city_tz = pytz.FixedOffset(city_timezone // 60)  # Create a pytz time zone object
+
+        # Extract data for the next 3 days and convert to the city's local time zone
+        forecast_data = {}
+        today = datetime.datetime.now(city_tz).date()
+        days_to_display = 3
+
+        for item in data['list']:
+            utc_time = datetime.datetime.fromisoformat(item['dt_txt'])
+            city_time = utc_time.astimezone(city_tz)
+            date = city_time.date()
+            time = city_time.time()
+
+            if date not in forecast_data:
+                forecast_data[date] = {
+                    'temp': [],
+                    'wind_speed': [],
+                    'humidity': [],
+                    'weather': [],
+                    'time': []
+                }
+            forecast_data[date]['temp'].append(item['main']['temp'] - 273.15)  # Convert Kelvin to Celsius
+            forecast_data[date]['wind_speed'].append(item['wind']['speed'])
+            forecast_data[date]['humidity'].append(item['main']['humidity'])
+            forecast_data[date]['weather'].append(item['weather'][0]['main'])
+            forecast_data[date]['time'].append(time)
+
+        for i in range(days_to_display):
+            display_weather_day = today + datetime.timedelta(days=i)
+            st.subheader(f'Day: {display_weather_day}')
+
+            # Describe temperature for the day
+            st.subheader('Temperature:')
+            st.write(f'Average Temperature: {sum(forecast_data[display_weather_day]["temp"]) / len(forecast_data[display_weather_day]["temp"]):.2f} °C')
+
+            # Describe wind speed for the day
+            st.subheader('Wind Speed:')
+            st.write(f'Average Wind Speed: {sum(forecast_data[display_weather_day]["wind_speed"]) / len(forecast_data[display_weather_day]["wind_speed"]):.2f} m/s')
+
+            # Describe humidity for the day
+            st.subheader('Humidity:')
+            st.write(f'Average Humidity: {sum(forecast_data[display_weather_day]["humidity"]) / len(forecast_data[display_weather_day]["humidity"]):.2f} %')
+
+            # Display temperature plot for the day
+            st.subheader('Temperature Plot:')
+            if chart_choice == 'Line Chart':
+                fig_temp, ax_temp = plt.subplots()
+                ax_temp.plot([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['temp'])
+                ax_temp.set_xlabel('Time')
+                ax_temp.set_ylabel('Temperature (°C)')
+                ax_temp.set_title(f'{display_weather_day} Temperature Line Chart')
+                st.pyplot(fig_temp)
+            elif chart_choice == 'Bar Chart':
+                fig_temp, ax_temp = plt.subplots()
+                ax_temp.bar([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['temp'])
+                ax_temp.set_xlabel('Time')
+                ax_temp.set_ylabel('Temperature (°C)')
+                ax_temp.set_title(f'{display_weather_day} Temperature Bar Chart')
+                st.pyplot(fig_temp)
+
+            # Display wind speed plot for the day
+            st.subheader('Wind Speed Plot:')
+            if chart_choice == 'Line Chart':
+                fig_wind, ax_wind = plt.subplots()
+                ax_wind.plot([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['wind_speed'])
+                ax_wind.set_xlabel('Time')
+                ax_wind.set_ylabel('Wind Speed (m/s)')
+                ax_wind.set_title(f'{display_weather_day} Wind Speed Line Chart')
+                st.pyplot(fig_wind)
+            elif chart_choice == 'Bar Chart':
+                fig_wind, ax_wind = plt.subplots()
+                ax_wind.bar([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['wind_speed'])
+                ax_wind.set_xlabel('Time')
+                ax_wind.set_ylabel('Wind Speed (m/s)')
+                ax_wind.set_title(f'{display_weather_day} Wind Speed Bar Chart')
+                st.pyplot(fig_wind)
+
+            # Display humidity plot for the day
+            st.subheader('Humidity:')
+            if chart_choice == 'Line Chart':
+                fig_humidity, ax_humidity = plt.subplots()
+                ax_humidity.plot([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['humidity'])
+                ax_humidity.set_xlabel('Time')
+                ax_humidity.set_ylabel('Humidity (%)')
+                ax_humidity.set_title(f'{display_weather_day} Humidity Line Chart')
+                st.pyplot(fig_humidity)
+            elif chart_choice == 'Bar Chart':
+                fig_humidity, ax_humidity = plt.subplots()
+                ax_humidity.bar([time.strftime("%I %p") for time in forecast_data[display_weather_day]['time']], forecast_data[display_weather_day]['humidity'])
+                ax_humidity.set_xlabel('Time')
+                ax_humidity.set_ylabel('Humidity (%)')
+                ax_humidity.set_title(f'{display_weather_day} Humidity Bar Chart')
+                st.pyplot(fig_humidity)
+
+            # Display weather condition labels with respect to time
+            st.subheader('Weather Conditions:')
+            time_and_weather = dict(zip(forecast_data[display_weather_day]['time'], forecast_data[display_weather_day]['weather']))
+            weather_labels = []
+
+            for time, weather in time_and_weather.items():
+                # Check the time to determine the label
+                if (time.hour >= 20 or time.hour < 5) and weather not in ['Clear', 'Clouds']:
+                    label = 'Night'
+                elif time.hour >= 17 and weather not in ['Clear', 'Clouds']:
+                    label = 'Evening'
+                else:
+                    label = weather  # Use the original weather label
+
+                weather_labels.append(f'{time.strftime("%I %p")}: {label}')
+
+            st.write("\n".join(weather_labels))
+
+    else:
+        st.write('Error fetching weather data')
