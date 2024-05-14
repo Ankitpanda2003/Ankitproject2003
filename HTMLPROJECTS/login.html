@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Login Page</title>
+<script>
+function login() {
+    // Get the username and password entered by the user
+    var username = document.getElementsByName("uname")[0].value;
+    var password = document.getElementsByName("pwd")[0].value;
+
+    // Validate the username and password (You should replace this with your actual login validation logic)
+    // For demonstration purposes, let's assume a simple check
+    if (username === "user" && password === "password") {
+        // Display a success message
+        document.getElementById("loginMessage").innerText = "Login Successful!";
+        // Redirect to the desired page after successful login (e.g., home page)
+        window.location.href = "home.html";
+    } else {
+        // Display an error message
+        document.getElementById("loginMessage").innerText = "Incorrect username or password";
+    }
+
+    // Prevent the default form submission
+    return false;
+}
+</script>
+</head>
+<body>
+<form onsubmit="return login();">
+    <label>Enter Username :</label>
+    <input type="text" name="uname"/>
+    <br/>
+
+    <label>Enter Pwd :</label>
+    <input type="password" name="pwd"/>
+    <br/>
+
+    <input type="submit" value="Login"/>
+</form>
+
+<div id="loginMessage"></div>
+
+<!-- Navigation links -->
+<hr>
+<h3>Navigation</h3>
+<ul>
+    <li><a href="deposit.html">Deposit</a></li>
+    <li><a href="withdraw.html">Withdraw</a></li>
+    <!-- Add more navigation links as needed -->
+</ul>
+</body>
+</html>
