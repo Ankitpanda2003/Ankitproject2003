@@ -1,0 +1,106 @@
+-- Water Source
+CREATE TABLE WaterSources (
+    SourceID INT PRIMARY KEY,
+    SourceName VARCHAR(50) NOT NULL,
+    Capacity INT NOT NULL,
+    CurrentLevel INT NOT NULL
+);
+
+-- Water Location
+CREATE TABLE WaterLocations (
+    LocationID INT PRIMARY KEY,
+    LocationName VARCHAR(50) NOT NULL,
+    Demand INT NOT NULL,
+    Usage INT NOT NULL
+);
+
+-- Water Distribution Record
+CREATE TABLE WaterDistribution (
+    DistributionID INT PRIMARY KEY,
+    SourceID INT NOT NULL,
+    LocationID INT NOT NULL,
+    Amount INT NOT NULL,
+    DistributionDate DATE NOT NULL,
+    FOREIGN KEY (SourceID) REFERENCES WaterSources(SourceID),
+    FOREIGN KEY (LocationID) REFERENCES WaterLocations(LocationID)
+);
+
+-- Water Quality Test
+CREATE TABLE WaterQualityTests (
+    TestID INT PRIMARY KEY,
+    LocationID INT NOT NULL,
+    TestDate DATE NOT NULL,
+    pHLevel DECIMAL(5, 2),
+    ContaminantLevel DECIMAL(10, 2),
+    FOREIGN KEY (LocationID) REFERENCES WaterLocations(LocationID)
+);
+
+-- Water Treatment Plant
+CREATE TABLE WaterTreatmentPlants (
+    PlantID INT PRIMARY KEY,
+    PlantName VARCHAR(50) NOT NULL,
+    Capacity INT NOT NULL,
+    Efficiency DECIMAL(5, 2) NOT NULL
+);
+
+-- Supplier
+CREATE TABLE Suppliers (
+    SupplierID INT PRIMARY KEY,
+    SupplierName VARCHAR(50) NOT NULL,
+    ContactInfo VARCHAR(100)
+);
+
+-- Invoice
+CREATE TABLE Invoices (
+    InvoiceID INT PRIMARY KEY,
+    SupplierID INT NOT NULL,
+    Amount DECIMAL(10, 2) NOT NULL,
+    DueDate DATE NOT NULL,
+    FOREIGN KEY (SupplierID) REFERENCES Suppliers(SupplierID)
+);
+
+-- Payment
+CREATE TABLE Payments (
+    PaymentID INT PRIMARY KEY,
+    InvoiceID INT NOT NULL,
+    PaymentAmount DECIMAL(10, 2) NOT NULL,
+    PaymentDate DATE NOT NULL,
+    FOREIGN KEY (InvoiceID) REFERENCES Invoices(InvoiceID)
+);
+
+-- Employee
+CREATE TABLE Employees (
+    EmployeeID INT PRIMARY KEY,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Position VARCHAR(50) NOT NULL
+);
+
+-- Maintenance Record
+CREATE TABLE MaintenanceRecords (
+    MaintenanceID INT PRIMARY KEY,
+    PlantID INT NOT NULL,
+    EmployeeID INT NOT NULL,
+    MaintenanceDate DATE NOT NULL,
+    Description VARCHAR(255),
+    FOREIGN KEY (PlantID) REFERENCES WaterTreatmentPlants(PlantID),
+    FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID)
+);
+
+-- Many-to-Many Relationship Table: Employee_Location (for maintenance)
+CREATE TABLE Employee_Location (
+    EmployeeID INT,
+    LocationID INT,
+    PRIMARY KEY (EmployeeID, LocationID),
+    FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
+    FOREIGN KEY (LocationID) REFERENCES WaterLocations(LocationID)
+);
+
+-- Many-to-Many Relationship Table: Employee_Test (for conducting tests)
+CREATE TABLE Employee_Test (
+    EmployeeID INT,
+    TestID INT,
+    PRIMARY KEY (EmployeeID, TestID),
+    FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
+    FOREIGN KEY (TestID) REFERENCES WaterQualityTests(TestID)
+);
