@@ -1,0 +1,91 @@
+import java.util.Random;
+import javax.swing.JOptionPane;
+import javax.sound.midi.*;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class RandomMusicPlayerWithUserInputDurationAndCount {
+    public static void main(String[] args) {
+        int songCount = getUserInputSongCount();
+        if (songCount <= 0) {
+            System.out.println("Invalid song count.");
+            return;
+        }
+
+        int durationInSeconds = getUserInputDuration();
+        if (durationInSeconds <= 0) {
+            System.out.println("Invalid duration.");
+            return;
+        }
+
+        int durationInMillis = durationInSeconds * 1000;
+
+        for (int i = 0; i < songCount; i++) {
+            playRandomMusic(durationInMillis);
+        }
+    }
+
+    public static void playRandomMusic(int duration) {
+        Thread musicThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Random random = new Random();
+                    int note = random.nextInt(128); // Generate a random MIDI note
+                    playMidiNote(note, duration); // Play the note for the user-defined duration
+                    Thread.sleep(1000); // Wait for 1 second before playing the next note
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        musicThread.start();
+    }
+
+    public static void playMidiNote(int note, int duration) {
+        try {
+            Sequencer sequencer = MidiSystem.getSequencer();
+            sequencer.open();
+
+            Sequence sequence = new Sequence(Sequence.PPQ, 1);
+            Track track = sequence.createTrack();
+
+            ShortMessage on = new ShortMessage();
+            on.setMessage(ShortMessage.NOTE_ON, 0, note, 64);
+            MidiEvent noteOn = new MidiEvent(on, 0);
+            track.add(noteOn);
+
+            ShortMessage off = new ShortMessage();
+            off.setMessage(ShortMessage.NOTE_OFF, 0, note, 64);
+            MidiEvent noteOff = new MidiEvent(off, duration);
+            track.add(noteOff);
+
+            sequencer.setSequence(sequence);
+            sequencer.start();
+            Thread.sleep(duration);
+            sequencer.stop();
+            sequencer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static int getUserInputSongCount() {
+        String songCountInput = JOptionPane.showInputDialog("Enter the number of songs to play:");
+        try {
+            return Integer.parseInt(songCountInput);
+        } catch (NumberFormatException e) {
+            return -1; // Return -1 for an invalid input
+        }
+    }
+
+    public static int getUserInputDuration() {
+        String durationInput = JOptionPane.showInputDialog("Enter the duration (in seconds) for each note:");
+        try {
+            return Integer.parseInt(durationInput);
+        } catch (NumberFormatException e) {
+            return -1; // Return -1 for an invalid input
+        }
+    }
+}
