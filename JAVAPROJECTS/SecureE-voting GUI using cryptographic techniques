@@ -1,1 +1,197 @@
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.security.*;
+import javax.swing.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.Signature;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+public class EVotingSystem extends JFrame {
+    private Map<String, Integer> candidates = new HashMap<>();
+    private Set<String> registeredVoters = new HashSet<>();
+    private Set<String> eligibleVoters = new HashSet<>();
+    private Set<String> votedVoters = new HashSet<>(); // Keep track of voted voters
+    private String voterID;
+    private String voterName;
+    private KeyPair keyPair;
+    private JButton[] candidateButtons;
+    private JLabel messageLabel;
+    private JLabel tallyLabel;
+    private boolean pollOpen = false;
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            EVotingSystem votingSystem = new EVotingSystem();
+            votingSystem.setupCandidates();
+            votingSystem.generateKeyPair();
+            votingSystem.createAndShowGUI();
+        });
+    }
+
+    private void setupCandidates() {
+        candidates.put("Candidate1", 0);
+        candidates.put("Candidate2", 0);
+        candidates.put("Candidate3", 0);
+    }
+    private void generateKeyPair() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048); // Adjust key size as needed
+            keyPair = keyPairGenerator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+    }
+    private void createAndShowGUI() {
+        setTitle("E-Voting System");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        messageLabel = new JLabel("Welcome to the E-voting system!");
+        panel.add(messageLabel);
+        JButton voterIDButton = new JButton("Enter Voter ID");
+        voterIDButton.addActionListener(new VoterIDActionListener());
+        panel.add(voterIDButton);
+        candidateButtons = new JButton[candidates.size()];
+        int i = 0;
+        for (String candidate : candidates.keySet()) {
+            candidateButtons[i] = new JButton(candidate);
+            candidateButtons[i].addActionListener(new VoteActionListener(candidate));
+            candidateButtons[i].setEnabled(pollOpen);
+            panel.add(candidateButtons[i]);
+            i++;
+        }
+        tallyLabel = new JLabel("Tally of Votes: " + getTallyString());
+        panel.add(tallyLabel);
+        add(panel);
+        pack();
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+    private String getTallyString() {
+        StringBuilder tally = new StringBuilder();
+        for (Map.Entry<String, Integer> entry : candidates.entrySet()) {
+            tally.append(entry.getKey()).append(": ").append(entry.getValue()).append("   ");
+        }
+        return tally.toString();
+    }
+    private class VoterIDActionListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (pollOpen) {
+                messageLabel.setText("You've already entered your Voter ID.");
+                return;
+            }
+
+            if (voterID != null && votedVoters.contains(voterID)) {
+                messageLabel.setText("You have already voted. One person, one vote!");
+                return;
+            }
+            voterID = JOptionPane.showInputDialog("Enter your Voter ID:");
+            if (voterID != null && !voterID.isEmpty()) {
+                if (verifyAge()) {
+                    eligibleVoters.add(voterID);
+                    pollOpen = true;
+                    messageLabel.setText("Voter ID verified. You can now vote.");
+                    enableCandidateButtons();
+                } else {
+                    messageLabel.setText("You must be 18 or older to vote.");
+                }
+            }
+        }
+    }
+    private boolean verifyAge() {
+        // Simulated age verification - Replace with your own logic
+        return true; // Assuming all voters are eligible for this example
+    }
+    private class VoteActionListener implements ActionListener {
+        private final String selectedCandidate;
+
+        VoteActionListener(String candidate) {
+            this.selectedCandidate = candidate;
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (!pollOpen) {
+                messageLabel.setText("Please enter your Voter ID first.");
+                return;
+            }
+            if (voterID == null || voterID.isEmpty()) {
+                messageLabel.setText("You must enter your Voter ID.");
+                return;
+            }
+            if (!eligibleVoters.contains(voterID)) {
+                messageLabel.setText("You must be 18 or older to vote.");
+                return;
+            }
+            if (votedVoters.contains(voterID)) {
+                messageLabel.setText("You have already voted. One person, one vote!");
+                return;
+            }
+            vote(selectedCandidate);
+            votedVoters.add(voterID); // Record the voted voter
+            tallyLabel.setText("Tally of Votes: " + getTallyString());
+            messageLabel.setText("Thank you for voting!");
+            disableCandidateButtons();
+        }
+    }
+
+    private void enableCandidateButtons() {
+        for (JButton button : candidateButtons) {
+            button.setEnabled(true);
+        }
+    }
+    private void disableCandidateButtons() {
+        for (JButton button : candidateButtons) {
+            button.setEnabled(false);
+        }
+    }
+    private void vote(String candidate) {
+        if (candidate != null) {
+            try {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                byte[] digest = md.digest(voterID.getBytes());
+                String hash = bytesToHex(digest);
+
+                voterName = JOptionPane.showInputDialog("Enter your name:");
+                if (voterName == null || voterName.isEmpty()) {
+                    return;
+                }
+                System.out.println("Voter ID: " + hash);
+                System.out.println(voterName + " voted for " + candidate);
+                // Create a digital signature for the vote
+                Signature signature = Signature.getInstance("SHA256withRSA");
+                signature.initSign(keyPair.getPrivate());
+                signature.update(candidate.getBytes());
+                byte[] signatureBytes = signature.sign();
+
+                // Verify the signature (In a real system, this verification would happen later)
+                signature.initVerify(keyPair.getPublic());
+                signature.update(candidate.getBytes());
+                boolean isSignatureValid = signature.verify(signatureBytes);
+
+                if (isSignatureValid) {
+                    System.out.println("Vote signature is valid.");
+                } else {
+                    System.out.println("Vote signature is not valid.");
+                }
+                // Update candidate tally
+                candidates.put(candidate, candidates.get(candidate) + 1);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
+}
 
